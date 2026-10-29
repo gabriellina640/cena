@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDownWideNarrow, ArrowRight, Bookmark, BookmarkCheck, Check, CheckCheck, ChevronDown, ChevronRight, Compass, Film, FolderHeart, Globe2, Grid2X2, Info, List, ListPlus, Loader2, Menu, PawPrint, Pencil, Plus, Search, SlidersHorizontal, Star, Trash2, X } from "lucide-react";
+import { ArrowDownWideNarrow, ArrowRight, Bookmark, BookmarkCheck, Check, CheckCheck, ChevronDown, ChevronRight, Compass, Film, FolderHeart, Globe2, Grid2X2, Info, List, ListPlus, Loader2, Menu, PawPrint, Pencil, Plus, Search, SlidersHorizontal, Sparkles, Star, Trash2, X } from "lucide-react";
 import { COLORS, GENRES, imageUrl } from "../lib/constants";
 import { movieKey, type FilmList, type Library, type Movie } from "../lib/types";
 
 import { changeLocalLibrary, exportBackup, parseBackup, persistLibrary, readLocalLibrary, STORAGE_KEY } from "../lib/local-library";
 import { filterMovies, fold } from "../lib/snapshot";
+import { rouletteCandidates } from "../lib/roulette";
 import type { CatalogMeta, FileCatalogResult } from "../lib/file-catalog";
 
 type View="explore"|"lists"|"list"|"watched";
@@ -42,6 +43,39 @@ function Poster({movie,className=""}:{movie:Movie;className?:string}) {
   return <div className={`poster-image ${className}`}>{movie.poster&&!broken?<img src={imageUrl(movie.poster)} alt={`Pôster de ${movie.title}`} loading="lazy" onError={()=>setBroken(true)}/>:<div className="poster-placeholder"><Film size={34}/><span>{movie.title}</span></div>}</div>;
 }
 
+function DailyRoulette({movies,onClose,onDetails}:{movies:Movie[];onClose:()=>void;onDetails:(movie:Movie)=>void}) {
+  const [spinning,setSpinning]=useState(false),[winner,setWinner]=useState<Movie|null>(null),[reel,setReel]=useState<Movie[]>([]);
+  const timers=useRef<{interval?:ReturnType<typeof setInterval>;timeout?:ReturnType<typeof setTimeout>}>({});
+  const currentMovies=useRef(movies);currentMovies.current=movies;
+  useEffect(()=>()=>{clearInterval(timers.current.interval);clearTimeout(timers.current.timeout);},[]);
+  function spin(){
+    if(spinning||!currentMovies.current.length)return;
+    setWinner(null);setSpinning(true);
+    const shuffle=()=>{const available=currentMovies.current;if(available.length)setReel(Array.from({length:3},()=>available[Math.floor(Math.random()*available.length)]));};
+    shuffle();
+    const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if(!reduced)timers.current.interval=setInterval(shuffle,120);
+    timers.current.timeout=setTimeout(()=>{
+      clearInterval(timers.current.interval);
+      const available=currentMovies.current;
+      if(available.length){const selected=available[Math.floor(Math.random()*available.length)];setWinner(selected);setReel([selected]);}
+      else setReel([]);
+      setSpinning(false);
+    },reduced?0:3200);
+  }
+  return <Modal label="Roleta do dia" onClose={onClose} className="roulette-modal">
+    <button className="modal-close" aria-label="Fechar roleta" onClick={onClose}><X size={20}/></button>
+    <div className="roulette-header"><span className="roulette-icon"><Sparkles size={21}/></span><span className="roulette-eyebrow">UMA ESCOLHA ESPECIAL</span><h2>Roleta do dia</h2><p>Deixe a sorte escolher seu próximo filme!</p></div>
+    <div className={`roulette-stage ${spinning?"is-spinning":""} ${winner?"has-winner":""}`}>
+      {winner&&<div className="roulette-party" aria-hidden="true"><span>🐱</span><span>🐶</span><span>🐈</span><span>🐕</span></div>}
+      <div className="roulette-pointer" aria-hidden="true">▼</div>
+      <div className="roulette-window">{reel.length?<div className="roulette-reel">{reel.map((movie,i)=><div className="roulette-ticket" key={`${movie.id}-${i}`}><Poster movie={movie}/><span>{movie.title}</span></div>)}</div>:<div className="roulette-placeholder"><Film size={30}/><span>Seu próximo filme está aqui</span></div>}</div>
+    </div>
+    <div className="roulette-result" aria-live="polite">{winner?<><span>O FILME DO DIA É</span><h3>{winner.title}</h3><p>Oba! A sessão de hoje está escolhida 🐾</p></>:spinning?<p>Girando... boa sorte!</p>:<p>{movies.length?`${movies.length} ${movies.length===1?"filme não assistido participa":"filmes não assistidos participam"}.`:"Não há filmes não assistidos nesta lista. Adicione um filme ou desmarque um assistido para participar."}</p>}</div>
+    <div className="roulette-actions"><button className="primary-button" disabled={spinning||!movies.length} onClick={spin}><Sparkles size={16}/>{spinning?"Girando...":winner?"Girar novamente":"Girar roleta"}</button>{winner&&<button className="secondary-button" onClick={()=>onDetails(winner)}>Ver filme <ArrowRight size={15}/></button>}</div>
+  </Modal>;
+}
+
 export default function Cinema() {
   const [view,setView]=useState<View>("explore"),[activeList,setActiveList]=useState("watchlist");
   const [library,setLibrary]=useState<Library>(emptyLibrary),[libraryReady,setLibraryReady]=useState(false),[libraryError,setLibraryError]=useState("");
@@ -58,6 +92,7 @@ export default function Cinema() {
   const [selected,setSelected]=useState<Movie|null>(null);
   const [editor,setEditor]=useState<ListEditor|null>(null),[deleteList,setDeleteList]=useState<FilmList|null>(null),[editorError,setEditorError]=useState("");
   const [sidebar,setSidebar]=useState(false),[showAbout,setShowAbout]=useState(false);
+  const [showRoulette,setShowRoulette]=useState(false);
   const searchRef=useRef<HTMLInputElement>(null);
   const currentGenres=GENRES;
   
@@ -144,6 +179,7 @@ export default function Cinema() {
   }
 
   const allLocal=Object.values(library.movies);
+  const rouletteMovies=rouletteCandidates(library,activeList);
   const filteredMovies=useMemo(()=>{
     const base=view==="explore"?(remoteCatalog?.results||[]):Object.values(library.movies).filter(m=>view==="watched"?m.watched:view==="list"?m.lists.includes(activeList):m.lists.length>0).map(m=>m.movie);
     if(view==="explore")return base;
@@ -194,6 +230,7 @@ export default function Cinema() {
 
       {view==="explore"&&!debouncedQuery&&!hasFilters&&<section className="library-summary" aria-label="Resumo das listas"><div className="summary-content"><div className="summary-heading"><span><Bookmark size={18}/></span><h2>Resumo</h2></div><div className="summary-stats"><button onClick={()=>{navigate("lists");}}><strong>{pendingCount}</strong><span>Para assistir</span></button><button onClick={()=>navigate("watched")}><strong>{watchedCount}</strong><span>Assistidos</span></button><button onClick={()=>navigate("lists")}><strong>{library.lists.length}</strong><span>Listas</span></button></div></div><DogSticker className="summary-dogs"/></section>}
 
+      {view==="list"&&list&&<div className="roulette-banner"><div><span className="roulette-banner-icon"><Sparkles size={19}/></span><div><strong>Roleta do dia</strong><p>Não sabe o que assistir? Deixe a sorte escolher!</p></div></div><button className="primary-button" onClick={()=>setShowRoulette(true)}><Sparkles size={16}/> Abrir roleta</button></div>}
       {view==="lists"?<>
         <div className="collection-toolbar"><div className="collection-stats"><span><strong>{savedCount}</strong> títulos salvos</span><span><strong>{pendingCount}</strong> para assistir</span><span><strong>{watchedCount}</strong> já assistidos</span></div><button className="primary-button" disabled={!libraryReady} onClick={()=>{setEditorError("");setEditor({name:"",color:"pink"});}}><Plus size={16}/> Nova lista</button></div>
         <div className="lists-grid">{library.lists.filter(l=>!debouncedQuery||fold(l.name).includes(fold(debouncedQuery))).map(l=>{
@@ -213,6 +250,7 @@ export default function Cinema() {
       <footer className="main-footer"><span><PawPrint size={14}/> Catálogo</span><button onClick={()=>setShowAbout(true)}>Dados e catálogo <Info size={13}/></button></footer>
     </main></div>
 
+    {showRoulette&&<DailyRoulette movies={rouletteMovies} onClose={()=>setShowRoulette(false)} onDetails={movie=>{setShowRoulette(false);openMovie(movie);}}/>}
     {selected&&<Modal label={`Detalhes de ${selected.title}`} onClose={closeMovie} className="movie-modal"><button className="modal-close" aria-label="Fechar detalhes" onClick={closeMovie}><X size={20}/></button><div className="detail-art">{selected.backdrop?<img src={imageUrl(selected.backdrop,"w1280")} alt=""/>:selected.poster?<img className="blur-art" src={imageUrl(selected.poster)} alt=""/>:null}<div className="detail-shade"/></div><div className="detail-body"><div className="detail-top"><Poster movie={selected}/><div className="detail-heading"><div className="eyebrow">FILME</div><h2>{selected.title}</h2><div className="detail-meta"><span>{selected.year||"Ano a confirmar"}</span>{selected.runtime&&<><span>·</span><span>{duration(selected.runtime)}</span></>}{selected.score>0&&<><span>·</span><span className="detail-rating"><Star size={13} fill="currentColor"/>{selected.score.toFixed(1).replace(".",",")} <small>TMDB</small></span></>}</div><div className="detail-genres">{selected.genres.map(id=><span key={id}>{GENRES.find(g=>g.id===id)?.name}</span>)}</div></div></div><p className="synopsis">{selected.overview}</p>
       <div className="save-section"><h3><ListPlus size={16}/> Adicionar às suas listas</h3><div className="save-list-options">{library.lists.map(l=>{const added=library.movies[movieKey(selected)]?.lists.includes(l.id);return <button key={l.id} disabled={busy||!libraryReady} aria-pressed={!!added} className={added?"added":""} onClick={()=>void mutate(added?{action:"removeMovie",listId:l.id,key:movieKey(selected)}:{action:"addMovie",listId:l.id,movie:selected},added?`Removido de “${l.name}”.`:`Salvo em “${l.name}”.`)}><span className={`color-dot ${l.color}`}/>{l.name}<span>{added?<Check size={15}/>:<Plus size={15}/>}</span></button>;})}</div></div><button className={`watched-full ${library.movies[movieKey(selected)]?.watched?"checked":""}`} disabled={busy||!libraryReady} onClick={()=>void mutate({action:"setWatched",movie:selected,watched:!library.movies[movieKey(selected)]?.watched},library.movies[movieKey(selected)]?.watched?"Marcado como não assistido.":"Marcado como já assistido.")}><CheckCheck size={19}/><span>{library.movies[movieKey(selected)]?.watched?"Já assistido":"Marcar como assistido"}<small>{library.movies[movieKey(selected)]?.watched?"Clique para marcar como não assistido":"Salvar no histórico de assistidos"}</small></span>{busy?<Loader2 size={17} className="spin"/>:library.movies[movieKey(selected)]?.watched?<Check size={17}/>:<Plus size={17}/>}</button>{toast&&<p className="modal-notice" role="status">{toast}</p>}</div></Modal>}
 

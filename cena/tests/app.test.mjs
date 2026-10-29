@@ -10,8 +10,18 @@ import {createFileCatalog} from '../lib/file-catalog.ts';
 import {filterMovies,fold} from '../lib/snapshot.ts';
 import {GET,POST} from '../app/api/library/route.ts';
 import {createBlobStore} from '../lib/blob-store.ts';
+import {rouletteCandidates} from '../lib/roulette.ts';
 const movie={id:27205,type:'movie',title:'A Origem',originalTitle:'Inception',year:2010,genres:[28,878],overview:'Sinopse de teste.',poster:'/test.jpg',backdrop:null,score:8.4,popularity:50,providers:[],availabilityKnown:false,source:'tmdb'};
 const memory=()=>{const data=new Map();return {getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)};};
+
+test('roleta considera apenas filmes não assistidos da lista escolhida',()=>{
+ const library=newLibrary();library.lists.push({id:'outra',name:'Outra',color:'pink',createdAt:''});
+ const entry=(m,watched,lists)=>({movie:m,watched,watchedAt:null,updatedAt:'',lists});
+ library.movies={a:entry(movie,false,['watchlist']),b:entry({...movie,id:2},true,['watchlist']),c:entry({...movie,id:3},false,['outra'])};
+ assert.deepEqual(rouletteCandidates(library,'watchlist').map(m=>m.id),[movie.id]);
+ assert.deepEqual(rouletteCandidates(library,'outra').map(m=>m.id),[3]);
+ assert.deepEqual(rouletteCandidates(library,'inexistente'),[]);
+});
 
 test('Blob usa versão dos metadados mesmo sem ETag HTTP e preserva alterações',async()=>{
  let data=newLibrary(),version=1,writes=0;

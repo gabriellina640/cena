@@ -262,3 +262,29 @@ h1 { font-size: 29px; line-height: 1.3; font-weight: 700; letter-spacing: -.9px;
 .catalog-tab { display:flex; align-items:center; gap:8px; padding-bottom:16px; border-bottom:2px solid var(--accent); color:var(--accent); font-size:13px; font-weight:600; }
 .backup-actions { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 24px; }
 .visually-hidden { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+.roulette-banner { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:0 0 25px; padding:19px 22px; border:1px solid #edc2d8; border-radius:14px; background:linear-gradient(115deg,#fff8fb,#f9dce9); }
+.roulette-banner>div { display:flex; align-items:center; gap:13px; }
+.roulette-banner-icon,.roulette-icon { display:grid; place-items:center; flex-shrink:0; color:#b83f79; background:#fff; border:1px solid #efc8da; border-radius:12px; width:42px; height:42px; }
+.roulette-banner strong { color:#87365d; font-size:14px; }.roulette-banner p { color:#9b6981; font-size:11px; margin:4px 0 0; }
+.roulette-modal { width:560px; background:#fff8fb; text-align:center; }
+.roulette-modal .modal-inner { padding:32px 35px 30px; }
+.roulette-header .roulette-icon { margin:0 auto 12px; width:46px; height:46px; }
+.roulette-eyebrow,.roulette-result>span { color:#bd638e; font-size:10px; font-weight:700; letter-spacing:2px; }
+.roulette-header h2 { color:#87365d; font-size:27px; margin:6px 0; }.roulette-header p,.roulette-result p { color:#a06c85; font-size:12px; line-height:1.6; margin:6px 0; }
+.roulette-stage { position:relative; margin:22px auto 12px; padding:18px 24px; max-width:420px; border:1px solid #e9b7d0; border-radius:20px; background:linear-gradient(145deg,#f6d1e3,#fff0f7); box-shadow:inset 0 0 0 5px #ffffff7a,0 8px 24px #aa4f7920; }
+.roulette-pointer { position:absolute; z-index:2; top:2px; left:50%; transform:translateX(-50%); color:#b83f79; font-size:20px; text-shadow:0 2px #fff; }
+.roulette-window { overflow:hidden; height:184px; border:3px solid #fff; border-radius:13px; background:#fff9fc; box-shadow:inset 0 2px 12px #ae638322; }
+.roulette-reel { height:100%; display:flex; justify-content:center; align-items:center; gap:12px; padding:10px; }
+.roulette-ticket { flex:0 0 29%; min-width:0; max-width:115px; color:#87365d; font-size:10px; font-weight:700; line-height:1.3; }
+.roulette-ticket .poster-image { height:125px; width:84px; max-width:100%; margin:0 auto 5px; border-radius:6px; box-shadow:0 4px 10px #7e345531; }
+.roulette-ticket>span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.roulette-placeholder { height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:10px; color:#bd88a1; font-size:12px; }
+.roulette-stage.is-spinning .roulette-reel { animation:reel-jiggle .16s linear infinite alternate; }.roulette-stage.has-winner .roulette-ticket { animation:winner-pop .45s ease-out; }
+.roulette-party { position:absolute; inset:0; pointer-events:none; z-index:3; }.roulette-party span { position:absolute; font-size:32px; animation:pet-dance .55s ease-in-out infinite alternate; filter:drop-shadow(0 3px 2px #9e587333); }.roulette-party span:nth-child(1) { left:-10px; top:32px; }.roulette-party span:nth-child(2) { right:-10px; top:32px; animation-delay:-.25s; }.roulette-party span:nth-child(3) { left:-8px; bottom:17px; animation-delay:-.4s; }.roulette-party span:nth-child(4) { right:-8px; bottom:17px; animation-delay:-.1s; }
+.roulette-result { min-height:62px; display:flex; flex-direction:column; justify-content:center; }.roulette-result h3 { color:#87365d; font-size:21px; line-height:1.25; margin:5px 0 0; overflow-wrap:anywhere; }.roulette-actions { display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin-top:14px; }
+@keyframes reel-jiggle { from { transform:translateY(-5px); filter:blur(1px); } to { transform:translateY(5px); filter:blur(0); } }
+@keyframes pet-dance { from { transform:translateY(2px) rotate(-14deg) scale(1); } to { transform:translateY(-10px) rotate(14deg) scale(1.12); } }
+@keyframes winner-pop { from { transform:scale(.75); opacity:.4; } to { transform:scale(1); opacity:1; } }
+@media (max-width:490px) { .roulette-banner { align-items:flex-start; flex-direction:column; padding:16px; }.roulette-banner .primary-button { width:100%; justify-content:center; }.roulette-modal .modal-inner { padding:28px 18px 24px; }.roulette-header h2 { font-size:24px; }.roulette-stage { margin-left:8px; margin-right:8px; padding:18px; }.roulette-ticket .poster-image { height:110px; width:73px; }.roulette-window { height:166px; } }
+@media (prefers-reduced-motion: reduce) { .roulette-stage.is-spinning .roulette-reel,.roulette-stage.has-winner .roulette-ticket,.roulette-party span { animation:none; } }
