@@ -1,0 +1,7 @@
+O catálogo de filmes já está incluído. Você não precisa configurar chave do TMDB.
+
+Para salvar o JSON das listas na Vercel, abra o projeto e escolha:
+Storage > Create Database > Blob > Private
+Conecte ao projeto e faça Redeploy. A variável BLOB_READ_WRITE_TOKEN é criada automaticamente.
+
+Sem Blob, as listas ficam salvas somente neste navegador.

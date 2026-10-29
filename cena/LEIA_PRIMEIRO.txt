@@ -1,0 +1,13 @@
+O catálogo já está incluído: 1.266.484 títulos de todos os gêneros.
+A chave do TMDB foi usada só na importação. Não precisa cadastrá-la na Vercel.
+
+1. Extraia o ZIP.
+2. Envie o conteúdo da pasta cena para um repositório GitHub, usando Git ou GitHub Desktop.
+3. Na Vercel: Add New > Project > importar repositório > Next.js > Deploy.
+4. Para manter o mesmo JSON de listas em todos os aparelhos:
+   projeto > Storage > Create Database > Blob > Continue > Private.
+5. Conecte o Blob ao projeto e faça Redeploy.
+
+Quando estiver conectado, o site mostrará "Salvo na Vercel".
+Sem Blob, as listas ficam apenas neste navegador.
+As instruções completas estão no README.md.

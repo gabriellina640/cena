@@ -1,0 +1,10 @@
+import { spawn } from 'node:child_process';
+import { createRequire } from 'node:module';
+const mode = process.argv[2];
+if (!['dev', 'build', 'start'].includes(mode)) throw new Error('Use dev, build ou start.');
+const args = process.argv.slice(3).filter(arg => arg !== '--strictPort').map(arg => arg === '--host' ? '--hostname' : arg);
+const require = createRequire(import.meta.url);
+const child = spawn(process.execPath, [require.resolve('next/dist/bin/next'), mode, ...(mode === 'start' ? [] : ['--webpack']), ...args], { stdio: 'inherit', env: process.env });
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));
+child.on('error', () => { console.error('Rode npm install antes de iniciar.'); process.exitCode = 1; });
+child.on('exit', code => { process.exitCode = code ?? 1; });
