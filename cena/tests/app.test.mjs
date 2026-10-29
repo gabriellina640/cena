@@ -9,8 +9,32 @@ import {changeSharedLibrary,StoreConflictError} from '../lib/json-store.ts';
 import {createFileCatalog} from '../lib/file-catalog.ts';
 import {filterMovies,fold} from '../lib/snapshot.ts';
 import {GET,POST} from '../app/api/library/route.ts';
+import {createBlobStore} from '../lib/blob-store.ts';
 const movie={id:27205,type:'movie',title:'A Origem',originalTitle:'Inception',year:2010,genres:[28,878],overview:'Sinopse de teste.',poster:'/test.jpg',backdrop:null,score:8.4,popularity:50,providers:[],availabilityKnown:false,source:'tmdb'};
 const memory=()=>{const data=new Map();return {getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)};};
+
+test('Blob usa versão dos metadados mesmo sem ETag HTTP e preserva alterações',async()=>{
+ let data=newLibrary(),version=1,writes=0;
+ const ops={
+  async get(_path,options){assert.equal(options.useCache,false);return {stream:new Response(JSON.stringify(data)).body,blob:{etag:''}};},
+  async head(){return {etag:`version-${version}`};},
+  async put(_path,body,options){assert.equal(options.ifMatch,`version-${version}`);data=JSON.parse(body);version++;writes++;},
+ };
+ const store=createBlobStore(ops);
+ await changeSharedLibrary(store,{action:'addMovie',listId:'watchlist',movie});
+ await changeSharedLibrary(store,{action:'setWatched',movie,watched:true});
+ assert.equal(writes,2);assert.equal(data.movies['movie:27205'].watched,true);assert.deepEqual(data.movies['movie:27205'].lists,['watchlist']);
+});
+test('leitura concorrente do Blob é repetida antes da gravação',async()=>{
+ let data=newLibrary(),version=1,heads=0;
+ const ops={
+  async get(){return {stream:new Response(JSON.stringify(data)).body,blob:{etag:'outro-formato'}};},
+  async head(){heads++;if(heads===2)version++;return {etag:`version-${version}`};},
+  async put(_path,body,options){assert.equal(options.ifMatch,`version-${version}`);data=JSON.parse(body);version++;},
+ };
+ await changeSharedLibrary(createBlobStore(ops),{action:'setWatched',movie,watched:true});
+ assert.equal(heads,4);assert.equal(data.movies['movie:27205'].watched,true);
+});
 
 test('listas persistem, não duplicam filmes e preservam histórico ao excluir uma lista',()=>{
  const s=memory(),{createdId}=changeLocalLibrary(s,{action:'createList',name:"Filmes d'água",color:'pink'});
